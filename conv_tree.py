@@ -57,35 +57,26 @@ class ConvTree(gtk.TreeView):
     self.loc_next_entry_id = get_text(loc_tree, "NextEntryID")
     self.loc_entry_count = get_text(loc_tree, "EntryCount")
 
-    loc_entries = {}
-    loc_node_entries = loc_tree.find("Entries")
-    for loc_entry in loc_node_entries:
-      node_id = int(get_text(loc_entry, "ID"))
-      default_text = get_text(loc_entry, "DefaultText")
-      female_text = get_text(loc_entry, "FemaleText")
-
-      new_node = poe_conv_node(node_id, default_text, female_text)
-      # Only add if it has not already been added
-      if not node_id in loc_entries:
-        loc_entries[node_id] = new_node
-
     # Create the  that contains the structure
-    #data_index = conv_file.index('\\data\\') + len('\\data\\')
     #control_name = conv_file[:data_index] + self.loc_name + ".conversation"
     control_name = os.path.dirname(os.path.realpath(__file__)) + '/00_cv_lord_harond.conversation'
-
+    
     # The conversation tree itself
     conv_tree = etree.parse(control_name)
-    
-    # The directory that keeps tabs on where everything is
+
+    # The dictionary that keeps tabs on where everything is
     self.iter_dict = {}
-    
-    # Now we begin to load in the conversation nodes
-    
+
+    # The dictionary that keeps tabs on conversation node themselves - these are needed for the node properties
+    flowchart_nodes = {}
+
     # We need to make sure we do not add nodes whoose parents have not yet been added, so first we need to find all the conversation roots, and then all their children
     links_dict = {}
     for flowchart_node in conv_tree.find("Nodes"):
       parent_id = int(get_text(flowchart_node, "NodeID"))
+
+      flowchart_nodes[parent_id] = flowchart_node
+
       link_node_list = []
       for link_node in flowchart_node.find("Links"):
         link_node_from = int(get_text(link_node, "FromNodeID"))
@@ -97,20 +88,34 @@ class ConvTree(gtk.TreeView):
         link_node_list.append((link_node_from, link_node_to,link_node))
              
       links_dict[parent_id] = link_node_list
-      print(link_node_list)
 
+    loc_entries = {}
+    loc_node_entries = loc_tree.find("Entries")
+    for loc_entry in loc_node_entries:      
+      node_id        = int(get_text(loc_entry, "ID"))
+      
+      if node_id in flowchart_nodes:
+        flowchart_node = flowchart_nodes[node_id]
+        new_node = poe_conv_node(loc_entry, flowchart_node)
+
+        # Only add if it has not already been added
+        if not node_id in loc_entries:
+          loc_entries[node_id] = new_node
+    
     # We get the keys, and we make the list that is safe to work on
     self.safe_add(links_dict, 0, {}, loc_entries)
  
   """ We use a recursive function to safely add the conversation nodes  """
-  def safe_add(self, links_dict, new_node_id, used_ids, loc_entries):   
-    list_to_add = links_dict[new_node_id]
+  def safe_add(self, links_dict, parent_node, used_ids, loc_entries):   
+    list_to_add = links_dict[parent_node]
+    
+    list_to_add.sort()
     keys_dict   = {}
 
     for item in list_to_add:
       link_node_from = item[0]
       link_node_to   = item[1]
- 
+
       # We use the old uniqueness trick to only add the new ones
       if link_node_to and not link_node_to in used_ids:
         keys_dict[link_node_to] = 1
@@ -122,15 +127,20 @@ class ConvTree(gtk.TreeView):
 
       entry = loc_entries[link_node_to]
   
-      if new_node_id != 0:
+      if parent_node != 0:
         self.add_node(loc_entries[link_node_to], loc_entries[link_node_from], iter_link)
       else:
         self.add_node(loc_entries[link_node_to], None, iter_link)
 
       # We ensure we never use the same id again
       used_ids[link_node_to] = 1
+
+    sorted_keys = keys_dict.keys()
+    sorted_keys.sort()
     
-    for new_id in keys_dict.keys():
+    for new_id in sorted_keys:
+      print("Parent node: " + str(parent_node))
+      print(sorted_keys)
       self.safe_add(links_dict, new_id, used_ids, loc_entries)
     
 
@@ -142,12 +152,16 @@ class ConvTree(gtk.TreeView):
 
     if parent == None:
       local_iter = self.conversations.append(None, insert_node)
-      self.iter_dict[insert_node[0]] = local_iter
     else:
       parent_list = parent.get_list()
       parent_iter = self.iter_dict[parent_list[0]]
       local_iter = self.conversations.append(parent_iter, insert_node)
+    
+    if not insert_node[0] in self.iter_dict:
       self.iter_dict[insert_node[0]] = local_iter
+
+  def conv_lst_cmp(self, lst1, lst2):
+    return lst1[1] - lst2[1]
 
   def create_column(self, label, place):
     title_col = gtk.TreeViewColumn()

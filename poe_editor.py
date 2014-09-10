@@ -108,14 +108,25 @@ class GUI(object):
     self.set_textview_text(self.default_text, '')
     self.set_textview_text(self.female_text,'')
 
-    self.skippable_check.set_active(False)
-    self.question_check.set_active(False)
-    self.persistence_check.set_active(False)
-    self.display_check.set_active(False)
+    self.default_text.set_sensitive(False)
+    self.female_text.set_sensitive(False)
+
+    self.active_check_set(self.skippable_check, None)
+    self.active_check_set(self.question_check, None)
+    self.active_check_set(self.persistence_check, None)
+    self.active_check_set(self.display_check, None)
 
   def set_field_value(self, value):
     self.set_textview_text(self.default_text, value.default_text)
     self.set_textview_text(self.female_text, value.female_text)
+
+    self.default_text.set_sensitive(True)
+    self.female_text.set_sensitive(True)
+
+    self.active_check_set(self.skippable_check, value.not_skippable)
+    self.active_check_set(self.question_check, value.is_question_node)
+   # self.active_check_set(self.is_temp
+    
 
   def destroy(self, widget):
     gtk.main_quit()
@@ -126,7 +137,13 @@ class GUI(object):
    conv = os.path.dirname(os.path.realpath(__file__)) + "/00_cv_lord_harond.stringtable"
    self.conv_tree.load_conversation_file(conv)
 
-
+  def active_check_set(self, check_box, value):
+    if value != None:
+      check_box.set_sensitive(True)
+      check_box.set_active(value)
+    else: 
+      check_box.set_sensitive(False)
+      check_box.set_active(False)
 #try:
   #GUI())
 #except KeyboardInterrupt:
