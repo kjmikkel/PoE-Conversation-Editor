@@ -110,9 +110,10 @@ class ConvTree(gtk.TreeView):
     list_to_add = links_dict[parent_node]
     
     list_to_add.sort()
-    keys_dict   = {}
 
     for item in list_to_add:
+      keys_dict   = {}
+      
       link_node_from = item[0]
       link_node_to   = item[1]
 
@@ -135,14 +136,14 @@ class ConvTree(gtk.TreeView):
       # We ensure we never use the same id again
       used_ids[link_node_to] = 1
 
-    sorted_keys = keys_dict.keys()
-    sorted_keys.sort()
+      sorted_keys = keys_dict.keys()
+      sorted_keys.sort()
     
-    for new_id in sorted_keys:
-      print("Parent node: " + str(parent_node))
-      print(sorted_keys)
-      self.safe_add(links_dict, new_id, used_ids, loc_entries)
-    
+      for new_id in sorted_keys:
+        print("Parent node: " + str(parent_node))
+        print(sorted_keys)
+        self.safe_add(links_dict, new_id, used_ids, loc_entries)
+      
 
   def add_node(self, node, parent = None, iter_link=None):
     insert_node = node.get_list()
